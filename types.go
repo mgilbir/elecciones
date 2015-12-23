@@ -1,6 +1,7 @@
 package elecciones
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 )
@@ -145,4 +146,54 @@ func (n Node) Path() string {
 
 func (n Node) URL() string {
 	return fmt.Sprintf(urlFormat, n.Path())
+}
+
+type ProgressInfo struct {
+	Processed int   `json:"processed"`
+	Timestamp int64 `json:"timestamp"`
+	Total     int   `json:"total"`
+}
+
+type Result struct {
+	AbstPercent    json.Number   `json:"abstPercent"`
+	Abstention     int           `json:"abstention"`
+	Blank          int           `json:"blank"`
+	Census         int           `json:"census"`
+	CountedCensus  int           `json:"countedCensus"`
+	CountedPercent json.Number   `json:"countedPercent"`
+	Null           int           `json:"null"`
+	Parties        []PartyResult `json:"parties"`
+	Voters         int           `json:"voters"`
+}
+
+type PartyResult struct {
+	Acronym string   `json:"acronym"`
+	Code    string   `json:"code"`
+	Color   string   `json:"color"`
+	Id      string   `json:"id"`
+	Members []string `json:"members"`
+	Name    string   `json:"name"`
+	Ord     int      `json:"ord"`
+	Seats   int      `json:"seats"`
+	Votes   Votes    `json:"votes"`
+}
+
+type Votes struct {
+	Percent    json.Number `json:"percent"`
+	Presential int         `json:"presential"`
+}
+
+type HistoricResult struct {
+	Year   int `json:"year"`
+	Result `json:",inline"`
+}
+
+type CurrentResult struct {
+	Result `json:",inline"`
+}
+
+type Response struct {
+	Historic []HistoricResult `json:"historic"`
+	Progress ProgressInfo     `json:"progress"`
+	Results  CurrentResult    `json:"results"`
 }
