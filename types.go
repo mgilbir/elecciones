@@ -3,7 +3,9 @@ package elecciones
 import (
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
+	"time"
 )
 
 type Pais []string
@@ -166,6 +168,105 @@ type Result struct {
 	Voters         int           `json:"voters"`
 }
 
+func (r Result) ExportToCsv(partiesHeaderOrder []string, withAbsolute bool, withPercentage bool, withSeats bool) []string {
+	var out []string
+
+	out = append(out, strconv.Itoa(r.Census))
+	out = append(out, strconv.Itoa(r.CountedCensus))
+	out = append(out, r.CountedPercent.String())
+	out = append(out, strconv.Itoa(r.Voters))
+	out = append(out, strconv.Itoa(r.Abstention))
+	out = append(out, strconv.Itoa(r.Blank))
+	out = append(out, strconv.Itoa(r.Null))
+
+	out = append(out, r.ExportPartiesToCsv(partiesHeaderOrder, withAbsolute, withPercentage, withSeats)...)
+
+	return out
+}
+
+func (r Result) GetCsvHeaders(partiesHeaderOrder []string, withAbsolute bool, withPercentage bool, withSeats bool) []string {
+	var out []string
+
+	out = append(out, "census")
+	out = append(out, "counted_census")
+	out = append(out, "counted_percent")
+	out = append(out, "voters")
+	out = append(out, "abstention")
+	out = append(out, "blank")
+	out = append(out, "null")
+
+	out = append(out, r.GetPartiesCsvHeaders(partiesHeaderOrder, withAbsolute, withPercentage, withSeats)...)
+
+	return out
+}
+
+func (r Result) ExportPartiesToCsv(partiesHeaderOrder []string, withAbsolute bool, withPercentage bool, withSeats bool) []string {
+	m := make(map[string]PartyResult)
+	for _, p := range r.Parties {
+		m[p.Acronym] = p
+	}
+
+	var absolutes []string
+	var percentages []string
+	var seats []string
+
+	for _, h := range partiesHeaderOrder {
+		var absoluteCount string
+		var percentage string
+		var seatCount string
+
+		if v, ok := m[h]; ok {
+			absoluteCount = strconv.Itoa(v.Votes.Presential)
+			percentage = v.Votes.Percent.String()
+			seatCount = strconv.Itoa(v.Seats)
+		}
+
+		absolutes = append(absolutes, absoluteCount)
+		percentages = append(percentages, percentage)
+		seats = append(seats, seatCount)
+	}
+
+	var out []string
+
+	if withAbsolute {
+		out = append(out, absolutes...)
+	}
+
+	if withPercentage {
+		out = append(out, percentages...)
+	}
+
+	if withSeats {
+		out = append(out, seats...)
+	}
+
+	return out
+}
+
+func (r Result) GetPartiesCsvHeaders(partiesHeaderOrder []string, withAbsolute bool, withPercentage bool, withSeats bool) []string {
+	var out []string
+
+	if withAbsolute {
+		for _, v := range partiesHeaderOrder {
+			out = append(out, "votes:"+v)
+		}
+	}
+
+	if withPercentage {
+		for _, v := range partiesHeaderOrder {
+			out = append(out, "percentage:"+v)
+		}
+	}
+
+	if withSeats {
+		for _, v := range partiesHeaderOrder {
+			out = append(out, "seats:"+v)
+		}
+	}
+
+	return out
+}
+
 type PartyResult struct {
 	Acronym string   `json:"acronym"`
 	Code    string   `json:"code"`
@@ -196,4 +297,29 @@ type Response struct {
 	Historic []HistoricResult `json:"historic"`
 	Progress ProgressInfo     `json:"progress"`
 	Results  CurrentResult    `json:"results"`
+}
+
+func (r Response) ExportCurrentToCsv(partiesHeaderOrder []string, withAbsolute bool, withPercentage bool, withSeats bool) []string {
+	var out []string
+
+	ts := time.Unix(r.Progress.Timestamp/1000, 0)
+	out = append(out, strconv.Itoa(int(ts.Unix())))
+	out = append(out, strconv.Itoa(r.Progress.Total))
+	out = append(out, strconv.Itoa(r.Progress.Processed))
+
+	out = append(out, r.Results.ExportToCsv(partiesHeaderOrder, withAbsolute, withPercentage, withSeats)...)
+
+	return out
+}
+
+func (r Response) GetCsvHeaders(partiesHeaderOrder []string, withAbsolute bool, withPercentage bool, withSeats bool) []string {
+	var out []string
+
+	out = append(out, "timestamp")
+	out = append(out, "progress_total")
+	out = append(out, "progress_processed")
+
+	out = append(out, r.Results.GetCsvHeaders(partiesHeaderOrder, withAbsolute, withPercentage, withSeats)...)
+
+	return out
 }
